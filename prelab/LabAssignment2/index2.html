@@ -1,0 +1,38 @@
+<html>
+<head>
+    <title>Tensor Operations using TensorFlow.js</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+</head>
+<body>
+<script>
+const a = tf.tensor([10, 20, 30]);
+const b = tf.tensor([2, 4, 6]);
+
+console.log("Tensor A:");
+a.print();
+
+console.log("Tensor B:");
+b.print();
+
+// Addition
+const add = tf.add(a, b);
+console.log("Addition:");
+add.print();
+
+// Subtraction
+const sub = tf.sub(a, b);
+console.log("Subtraction:");
+sub.print();
+
+// Multiplication
+const mul = tf.mul(a, b);
+console.log("Multiplication:");
+mul.print();
+
+// Division
+const div = tf.div(a, b);
+console.log("Division:");
+div.print();
+</script>
+</body>
+</html>
