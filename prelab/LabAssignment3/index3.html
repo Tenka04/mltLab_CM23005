@@ -1,0 +1,24 @@
+<html>
+<head>
+    <title>Tensor Reshape and Flatten</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+</head>
+<body>
+<script>
+const tensor = tf.tensor([1, 2, 3, 4, 5, 6]);
+
+console.log("Original Tensor:");
+tensor.print();
+
+// Reshape the tensor into 2x3 matrix
+const reshapedTensor = tensor.reshape([2, 3]);
+console.log("Reshaped Tensor (2x3):");
+reshapedTensor.print();
+
+// Flatten the reshaped tensor
+const flattenedTensor = reshapedTensor.flatten();
+console.log("Flattened Tensor:");
+flattenedTensor.print();
+</script>
+</body>
+</html>
