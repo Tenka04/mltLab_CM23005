@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Interactive Regression (TensorFlow.js)</title>
+
+    <!-- TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body { font-family: sans-serif; padding: 20px; display: flex; justify-content: center; }
+        .container { width: 800px; }
+        .stats { background: #f4f4f4; padding: 15px; margin-top: 20px; border-radius: 8px; }
+        .code { font-family: monospace; color: #c2185b; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Linear Regression (TensorFlow.js)</h1>
+    <p>Open console and type: <span class="code">addPoint(x, y)</span></p>
+
+    <canvas id="chart"></canvas>
+
+    <div class="stats">
+        <p><b>Equation:</b> <span id="eqn">y = ?x + ?</span></p>
+        <p><b>MSE:</b> <span id="mse">0</span></p>
+        <p><b>Points:</b> <span id="count">0</span></p>
+    </div>
+</div>
+
+<script>
+let points = [
+    {x: 1, y: 2.2},
+    {x: 2, y: 3.9},
+    {x: 3, y: 6.1},
+    {x: 4, y: 8.2},
+    {x: 5, y: 10.1}
+];
+
+const ctx = document.getElementById("chart").getContext("2d");
+
+const chart = new Chart(ctx, {
+    type: 'scatter',
+    data: {
+        datasets: [
+            {
+                label: 'Actual Data',
+                data: points,
+                backgroundColor: '#3498db'
+            },
+            {
+                label: 'Predicted Line',
+                type: 'line',
+                data: [],
+                borderColor: '#e74c3c',
+                pointRadius: 0,
+                fill: false
+            }
+        ]
+    }
+});
+
+// Build model
+let model;
+function createModel() {
+    model = tf.sequential();
+    model.add(tf.layers.dense({ units: 1, inputShape: [1] }));
+    model.compile({
+        optimizer: tf.train.sgd(0.01),
+        loss: 'meanSquaredError'
+    });
+}
+
+// Train and update graph
+async function trainAndUpdate() {
+    tf.disposeVariables();
+    createModel();
+
+    const xs = tf.tensor2d(points.map(p => p.x), [points.length, 1]);
+    const ys = tf.tensor2d(points.map(p => p.y), [points.length, 1]);
+
+    await model.fit(xs, ys, { epochs: 100 });
+
+    const preds = model.predict(xs).dataSync();
+
+    // Calculate MSE
+    let mse = 0;
+    points.forEach((p, i) => {
+        mse += Math.pow(p.y - preds[i], 2);
+    });
+    mse /= points.length;
+
+    // Get equation
+    const weights = model.getWeights();
+    const m = weights[0].dataSync()[0];
+    const c = weights[1].dataSync()[0];
+
+    // Update UI
+    document.getElementById("eqn").innerText =
+        `y = ${m.toFixed(2)}x + ${c.toFixed(2)}`;
+    document.getElementById("mse").innerText = mse.toFixed(4);
+    document.getElementById("count").innerText = points.length;
+
+    // Update regression line
+    const minX = Math.min(...points.map(p => p.x)) - 1;
+    const maxX = Math.max(...points.map(p => p.x)) + 1;
+
+    chart.data.datasets[0].data = points;
+    chart.data.datasets[1].data = [
+        {x: minX, y: m * minX + c},
+        {x: maxX, y: m * maxX + c}
+    ];
+    chart.update();
+
+    console.log(`Re-trained with ${points.length} points`);
+}
+
+// Add point from console
+window.addPoint = (x, y) => {
+    points.push({x, y});
+    trainAndUpdate();
+    console.log(`Point added: (${x}, ${y})`);
+};
+
+// Initial training
+trainAndUpdate();
+</script>
+
+</body>
+</html>
