@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Learning Rate Analysis (TensorFlow.js)</title>
+
+    <!-- TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            width: 800px;
+            text-align: center;
+        }
+        .log-container {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            text-align: left;
+            font-family: monospace;
+        }
+        .status-stable { color: #2ecc71; }
+        .status-diverge { color: #e74c3c; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>2. Experiment with Learning Rates & Convergence</h1>
+    <p>Open Console (F12) and type: <b>testLR(0.01)</b></p>
+
+    <canvas id="convergenceChart"></canvas>
+
+    <div class="log-container" id="logBox">
+        > Console ready. Try testLR(0.001), testLR(0.01), testLR(0.1)
+    </div>
+</div>
+
+<script>
+const ctx = document.getElementById('convergenceChart').getContext('2d');
+
+const chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: [],
+        datasets: []
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: { title: { display: true, text: 'Loss (MSE)' } },
+            x: { title: { display: true, text: 'Epoch' } }
+        }
+    }
+});
+
+// Training data
+const data = [
+    {x:1, y:2},
+    {x:2, y:4},
+    {x:3, y:6},
+    {x:4, y:8},
+    {x:5, y:10}
+];
+
+window.testLR = async (lr) => {
+    tf.disposeVariables();
+
+    const model = tf.sequential();
+    model.add(tf.layers.dense({ units: 1, inputShape: [1] }));
+    model.compile({
+        optimizer: tf.train.sgd(lr),
+        loss: 'meanSquaredError'
+    });
+
+    const xs = tf.tensor2d(data.map(p => p.x), [data.length, 1]);
+    const ys = tf.tensor2d(data.map(p => p.y), [data.length, 1]);
+
+    const losses = [];
+    let diverged = false;
+
+    console.log(`Training started | LR = ${lr}`);
+
+    await model.fit(xs, ys, {
+        epochs: 30,
+        callbacks: {
+            onEpochEnd: (epoch, logs) => {
+                losses.push(logs.loss);
+
+                if (!isFinite(logs.loss) || logs.loss > 1000) {
+                    diverged = true;
+                }
+
+                console.log(`Epoch ${epoch} | Loss = ${logs.loss.toFixed(4)}`);
+            }
+        }
+    });
+
+    // Update chart
+    chart.data.labels = losses.map((_, i) => `Epoch ${i}`);
+    const color = `hsl(${Math.random() * 360}, 70%, 50%)`;
+
+    chart.data.datasets.push({
+        label: `LR ${lr} (${diverged ? "Diverged" : "Converged"})`,
+        data: losses,
+        borderColor: color,
+        fill: false,
+        tension: 0.2
+    });
+
+    chart.update();
+
+    // Log result
+    const status = diverged ? "Diverged (Overshoot)" : "Converging";
+    const statusClass = diverged ? "status-diverge" : "status-stable";
+
+    document.getElementById("logBox").innerHTML +=
+        `<br><span class="${statusClass}">[LR ${lr}] ${status}, Final Loss: ${losses.at(-1).toFixed(4)}</span>`;
+
+    console.log(`Training finished | Status: ${status}`);
+};
+</script>
+
+</body>
+</html>
