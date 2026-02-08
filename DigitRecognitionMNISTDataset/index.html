@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MNIST Digit Recognition</title>
+
+  <!-- TensorFlow.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.0.0/dist/tf.min.js"></script>
+
+  <!-- tfjs-vis -->
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-vis@1.0.2/dist/tfjs-vis.umd.min.js"></script>
+
+  <!-- App files -->
+  <script src="data.js" type="module"></script>
+  <script src="script.js" type="module"></script>
+
+  <style>
+    body { font-family: Arial; }
+    canvas { border: 1px solid black; }
+  </style>
+</head>
+
+<body>
+  <h2>Draw a Digit (0–9)</h2>
+
+  <canvas id="drawCanvas" width="280" height="280"></canvas><br><br>
+  <button id="predict">Predict</button>
+  <button id="clear">Clear</button>
+
+  <h3 id="result"></h3>
+</body>
+</html>
