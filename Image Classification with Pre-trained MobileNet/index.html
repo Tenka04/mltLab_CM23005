@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SpeciesNet — Vision Classifier</title>
+
+  <!-- IBM Plex Mono (terminal) + Rajdhani (labels) + Share Tech Mono (readouts) -->
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600;700&family=Share+Tech+Mono&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.0/dist/mobilenet.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="scanlines"></div>
+  <div class="vignette"></div>
+
+  <div class="page">
+
+    <header>
+      <div class="brand">
+        <div class="brand-sigil">
+          <div class="sigil-ring r1"></div>
+          <div class="sigil-ring r2"></div>
+          <span class="sigil-icon">⬡</span>
+        </div>
+        <div class="brand-text">
+          <div class="brand-pre">// SYSTEM ONLINE</div>
+          <h1>SpeciesNet<span class="cursor-blink">_</span></h1>
+          <p>MobileNetV2 · COCO-SSD · WebGL · v2.4.1</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+          <span id="theme-thumb">[ DARK ]</span>
+        </button>
+        <div class="status-pill" id="status-pill">
+          <div class="sdot" id="sdot"></div>
+          <span id="status-txt">LOADING...</span>
+        </div>
+      </div>
+    </header>
+
+    <div id="load-banner">
+      <div class="lspinner" id="lspinner"></div>
+      <div class="banner-body">
+        <h4 id="banner-h">&gt; INITIALIZING NEURAL NETWORKS...</h4>
+        <p id="banner-p">PRETRAINED WEIGHTS · NO TRAINING REQUIRED · WEBGL BACKEND · 80+ CLASSES</p>
+        <div class="model-bars">
+          <div class="mbar-row mbar-mn">
+            <span class="mbar-label">MOBILENET_V2</span>
+            <div class="mbar-track"><div class="mbar-fill" id="mn-bar"></div></div>
+            <span class="mbar-pct" id="mn-status">0%</span>
+          </div>
+          <div class="mbar-row mbar-cs">
+            <span class="mbar-label">COCO_SSD    </span>
+            <div class="mbar-track"><div class="mbar-fill" id="cs-bar"></div></div>
+            <span class="mbar-pct" id="cs-status">0%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-bar">
+      <button class="tab-btn active" onclick="switchTab('upload', this)">[ IMG_UPLOAD ]</button>
+      <button class="tab-btn" onclick="switchTab('webcam', this)">[ LIVE_CAM ]</button>
+    </div>
+
+    <!-- PANEL: UPLOAD -->
+    <div class="panel active" id="panel-upload">
+
+      <div class="drop-zone" id="drop-zone"
+           ondragover="onDragOver(event)"
+           ondragleave="onDragLeave(event)"
+           ondrop="onDrop(event)"
+           onclick="document.getElementById('file-input').click()">
+        <div class="drop-inner">
+          <pre class="drop-ascii">  ╔══════════╗
+  ║  INSERT  ║
+  ║  IMAGE   ║
+  ╚══════════╝</pre>
+          <p class="drop-sub">DRAG · DROP · CLICK &nbsp;│&nbsp; JPG PNG WEBP GIF</p>
+          <button class="btn-browse"
+                  onclick="event.stopPropagation(); document.getElementById('file-input').click()">
+            &gt;&gt; BROWSE_FILES
+          </button>
+        </div>
+        <div class="drop-corner dc-tl"></div>
+        <div class="drop-corner dc-tr"></div>
+        <div class="drop-corner dc-bl"></div>
+        <div class="drop-corner dc-br"></div>
+      </div>
+      <input type="file" id="file-input" accept="image/*" onchange="onFileSelect(event)" />
+
+      <div class="classify-grid">
+
+        <div class="card preview-card" style="animation-delay:.48s">
+          <div class="card-title"><span class="ct-br">[</span> INPUT_FRAME <span class="ct-br">]</span></div>
+          <div class="no-img" id="no-img">
+            <pre class="ascii-placeholder">┌─────────────┐
+│             │
+│   NO_IMG    │
+│   LOADED    │
+│             │
+└─────────────┘</pre>
+          </div>
+          <div class="img-wrap" id="img-wrap" style="display:none">
+            <img id="preview-img" alt="preview" />
+            <canvas id="bbox-canvas"></canvas>
+            <div class="img-corner ic-tl"></div>
+            <div class="img-corner ic-tr"></div>
+            <div class="img-corner ic-bl"></div>
+            <div class="img-corner ic-br"></div>
+          </div>
+          <div class="detect-badges" id="detect-badges"></div>
+          <div class="action-row">
+            <button class="btn-classify" id="classify-btn" onclick="classifyImage()" disabled>
+              <div class="bspinner" id="cls-spinner"></div>
+              <span id="cls-txt">&gt;&gt; RUN_CLASSIFY</span>
+            </button>
+            <button class="btn-reset" onclick="resetUpload()">&gt; RESET</button>
+          </div>
+        </div>
+
+        <div class="card results-card" style="animation-delay:.58s">
+          <div class="card-title"><span class="ct-br">[</span> TOP-5 RESULTS <span class="ct-br">]</span></div>
+
+          <div class="person-hero" id="person-hero">
+            <div class="ph-badge">// HUMAN_DETECTED</div>
+            <h2 id="person-count-text">PERSON</h2>
+            <p id="person-sub">ENGINE: COCO-SSD OBJECT DETECTION</p>
+          </div>
+
+          <div class="best-hero" id="best-hero">
+            <div class="hero-label">// BEST_MATCH</div>
+            <div class="hero-name" id="hero-name">—</div>
+            <div class="hero-conf" id="hero-conf">—</div>
+          </div>
+
+          <div id="pred-list">
+            <div class="empty-hint"><pre>&gt; AWAITING INPUT...
+&gt; UPLOAD IMAGE TO BEGIN</pre></div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="card chart-card" style="animation-delay:.68s">
+        <div class="card-title"><span class="ct-br">[</span> CONFIDENCE DISTRIBUTION <span class="ct-br">]</span></div>
+        <div class="chart-wrap">
+          <canvas id="upload-chart"></canvas>
+        </div>
+      </div>
+
+      <div id="fact-card">
+        <div class="fact-header">
+          <div class="fact-thumb" id="fact-thumb">?</div>
+          <div class="fact-header-text">
+            <div class="fact-pre">// SPECIES_DATA</div>
+            <h4 id="fact-animal-name">UNKNOWN</h4>
+            <span>SRC: WIKIPEDIA_API</span>
+          </div>
+        </div>
+        <div id="fact-body">
+          <div class="fact-loading">
+            <div class="mini-spin"></div>
+            <span>&gt; FETCHING DATA...</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- PANEL: WEBCAM -->
+    <div class="panel" id="panel-webcam">
+      <div class="webcam-grid">
+
+        <div class="card cam-card" style="animation-delay:.4s">
+          <div class="cam-card-header">
+            <div class="card-title" style="margin:0"><span class="ct-br">[</span> CAM_FEED <span class="ct-br">]</span></div>
+            <div class="fps-chip" id="fps-chip"></div>
+          </div>
+          <div class="video-wrap">
+            <video id="webcam-video" autoplay muted playsinline></video>
+            <canvas id="cam-bbox-canvas"></canvas>
+            <div class="scan-bar" id="scan-bar"></div>
+            <div class="vid-live" id="vid-live"><div class="ldot"></div>REC</div>
+            <div class="cam-placeholder" id="cam-placeholder">
+              <pre class="ascii-cam">╔══════════════╗
+║  CAM OFFLINE ║
+║   ─────────  ║
+║  PRESS START ║
+╚══════════════╝</pre>
+            </div>
+            <button class="btn-snap-overlay" id="btn-snap" onclick="takeSnapshot()" title="Capture">[ ◉ ]</button>
+          </div>
+          <canvas id="webcam-canvas" width="224" height="224" style="display:none"></canvas>
+          <div class="cam-btns">
+            <button class="btn-start-cam" onclick="startWebcam()">&gt;&gt; START_CAM</button>
+            <button class="btn-stop-cam" onclick="stopWebcam()">&gt; STOP</button>
+          </div>
+          <p class="cam-hint">// PRESS [ ◉ ] TO CAPTURE + CLASSIFY</p>
+        </div>
+
+        <div class="card live-results-card" style="animation-delay:.5s">
+          <div class="card-title"><span class="ct-br">[</span> LIVE_RESULTS <span class="ct-br">]</span></div>
+
+          <div class="person-hero" id="cam-person-hero">
+            <div class="ph-badge">// HUMAN_DETECTED</div>
+            <h2 id="cam-person-count-text">PERSON</h2>
+            <p id="cam-person-sub">LIVE COCO-SSD DETECTION</p>
+          </div>
+
+          <div class="best-hero" id="cam-best-hero">
+            <div class="hero-label">// BEST_MATCH</div>
+            <div class="hero-name" id="cam-hero-name">—</div>
+            <div class="hero-conf" id="cam-hero-conf">—</div>
+          </div>
+
+          <div id="cam-pred-list">
+            <div class="empty-hint"><pre>&gt; CAM_OFFLINE
+&gt; START CAMERA TO BEGIN</pre></div>
+          </div>
+
+          <div class="live-chart-section">
+            <div class="card-title" style="font-size:.75rem;margin-bottom:10px"><span class="ct-br">[</span> LIVE_CONFIDENCE <span class="ct-br">]</span></div>
+            <div class="chart-wrap" style="height:175px">
+              <canvas id="cam-chart"></canvas>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SNAPSHOT MODAL -->
+  <div class="snap-modal" id="snap-modal">
+    <div class="snap-backdrop" onclick="closeSnapModal()"></div>
+    <div class="snap-modal-card">
+      <div class="snap-modal-title">&gt;&gt; FRAME_CAPTURED</div>
+      <img id="snap-preview-img" alt="Snapshot" />
+      <div class="snap-modal-btns">
+        <button class="btn-snap-close" onclick="closeSnapModal()">&gt; DISCARD</button>
+        <button class="btn-snap-classify" onclick="classifySnapshot()">&gt;&gt; CLASSIFY_FRAME</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+  <script src="script.js"></script>
+</body>
+</html>
