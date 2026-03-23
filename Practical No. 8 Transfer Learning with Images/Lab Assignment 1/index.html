@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lab 1: Transfer Learning</title>
+    <!-- TensorFlow.js -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
+    <!-- KNN Classifier -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/knn-classifier"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .wrapper { display: flex; margin-bottom: 20px; gap: 20px; }
+        video { border: 2px solid #ccc; border-radius: 8px; }
+        .controls { display: flex; flex-direction: column; gap: 10px; justify-content: center; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+        .stats { background: #f4f4f4; padding: 15px; border-radius: 8px; width: 640px; text-align: center; }
+        #status { font-weight: bold; color: #d35400; margin-bottom: 10px; }
+        .pred-text { font-size: 24px; font-weight: bold; color: #27ae60; }
+    </style>
+</head>
+<body>
+
+    <h1>Lab Assignment 1: Retrain MobileNet for 3 Categories</h1>
+    <p>Use Transfer Learning to identify 3 custom categories (e.g., Apple, Banana, Orange).</p>
+    
+    <div id="status">Loading models... Please wait.</div>
+
+    <div class="wrapper">
+        <video id="video" width="640" height="480" autoplay playsinline></video>
+        <div class="controls">
+            <button id="class0Btn">Add Example (Category A)</button>
+            <p>Count A: <span id="count0">0</span></p>
+            
+            <button id="class1Btn">Add Example (Category B)</button>
+            <p>Count B: <span id="count1">0</span></p>
+            
+            <button id="class2Btn">Add Example (Category C)</button>
+            <p>Count C: <span id="count2">0</span></p>
+        </div>
+    </div>
+
+    <div class="stats">
+        <h2>Prediction: <span id="prediction" class="pred-text">None</span></h2>
+        <p>Confidence: <span id="confidence">0</span>%</p>
+    </div>
+
+<script>
+    const classifier = knnClassifier.create();
+    let net;
+    const video = document.getElementById('video');
+    
+    const classes = ['Category A', 'Category B', 'Category C'];
+
+    async function setupCamera() {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: false });
+        video.srcObject = stream;
+        return new Promise(resolve => { video.onloadedmetadata = () => resolve(video); });
+    }
+
+    async function app() {
+        document.getElementById('status').innerText = 'Loading MobileNet...';
+        net = await mobilenet.load();
+        document.getElementById('status').innerText = 'Starting Camera...';
+        await setupCamera();
+        video.play();
+        document.getElementById('status').innerText = 'Ready! Add examples to train.';
+
+        const addExample = classId => {
+            const activation = net.infer(video, true);
+            classifier.addExample(activation, classId);
+            const countElem = document.getElementById(`count${classId}`);
+            countElem.innerText = parseInt(countElem.innerText) + 1;
+        };
+
+        document.getElementById('class0Btn').addEventListener('click', () => addExample(0));
+        document.getElementById('class1Btn').addEventListener('click', () => addExample(1));
+        document.getElementById('class2Btn').addEventListener('click', () => addExample(2));
+
+        while (true) {
+            if (classifier.getNumClasses() > 0) {
+                const activation = net.infer(video, 'conv_preds');
+                const result = await classifier.predictClass(activation);
+                document.getElementById('prediction').innerText = classes[result.label];
+                document.getElementById('confidence').innerText = (result.confidences[result.label] * 100).toFixed(1);
+            }
+            await tf.nextFrame();
+        }
+    }
+
+    app();
+</script>
+
+</body>
+</html>

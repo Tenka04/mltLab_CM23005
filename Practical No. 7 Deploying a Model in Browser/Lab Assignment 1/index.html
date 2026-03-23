@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lab 1: Train & Save Model</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; padding: 20px; }
+        .container { width: 600px; }
+        button { padding: 10px 20px; margin: 10px 0; font-size: 16px; cursor: pointer; display: block; }
+        .stats { background: #f4f4f4; padding: 15px; border-radius: 8px; margin-top: 20px; }
+        .code { font-family: monospace; color: #c2185b; background: #eee; padding: 2px 4px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Lab Assignment 1: Train & Save to LocalStorage</h1>
+    <p>Train a simple <span class="code">y = 2x - 1</span> model and save it to LocalStorage.</p>
+    
+    <button id="trainBtn">1. Train Model</button>
+    <button id="saveBtn" disabled>2. Save to LocalStorage</button>
+
+    <div class="stats">
+        <p><b>Status:</b> <span id="status">Waiting to train...</span></p>
+        <p><b>Prediction for x=10:</b> <span id="pred">-</span></p>
+    </div>
+</div>
+
+<script>
+    let model;
+    
+    document.getElementById('trainBtn').addEventListener('click', async () => {
+        document.getElementById('status').innerText = "Training...";
+        
+        // Define model
+        model = tf.sequential();
+        model.add(tf.layers.dense({units: 1, inputShape: [1]}));
+        model.compile({optimizer: 'sgd', loss: 'meanSquaredError'});
+        
+        // Generate dataset for y = 2x - 1
+        const xs = tf.tensor2d([-1, 0, 1, 2, 3, 4], [6, 1]);
+        const ys = tf.tensor2d([-3, -1, 1, 3, 5, 7], [6, 1]);
+        
+        await model.fit(xs, ys, {epochs: 250});
+        
+        const prediction = model.predict(tf.tensor2d([10], [1, 1])).dataSync()[0];
+        document.getElementById('pred').innerText = prediction.toFixed(4) + " (Expected ~19)";
+        
+        document.getElementById('status').innerText = "Trained successfully!";
+        document.getElementById('saveBtn').disabled = false;
+    });
+
+    document.getElementById('saveBtn').addEventListener('click', async () => {
+        const saveResults = await model.save('localstorage://lab1-model');
+        document.getElementById('status').innerText = `Saved to LocalStorage! Timestamp: ${saveResults.modelArtifactsInfo.dateSaved}`;
+    });
+</script>
+
+</body>
+</html>

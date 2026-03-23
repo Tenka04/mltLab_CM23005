@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lab 3: Export & Import Model</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; padding: 20px; }
+        .container { width: 600px; }
+        button { padding: 10px 20px; margin: 5px 0; font-size: 16px; cursor: pointer; }
+        .stats { background: #f4f4f4; padding: 15px; border-radius: 8px; margin-top: 20px; }
+        .panel { border: 1px solid #ccc; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        input[type="file"] { margin: 10px 0; display: block; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Lab Assignment 3: Export & Import Model Files</h1>
+    
+    <div class="panel">
+        <h2>Part A: Export Model</h2>
+        <p>First, train a basic model and download its JSON and BIN files.</p>
+        <button id="trainBtn">1. Train Model</button>
+        <button id="exportBtn" disabled>2. Download Model Files</button>
+        <p><b>Status A:</b> <span id="statusA">Waiting...</span></p>
+    </div>
+
+    <div class="panel">
+        <h2>Part B: Import Model</h2>
+        <p>Select both the <kbd>.json</kbd> and <kbd>.bin</kbd> files you just downloaded, then run prediction.</p>
+        <input type="file" id="uploadFiles" multiple accept=".json,.bin">
+        <button id="importBtn">3. Load from Files</button>
+        <button id="predictBtn" disabled>4. Predict (x=10)</button>
+        <p><b>Status B:</b> <span id="statusB">Waiting...</span></p>
+        <p><b>Prediction:</b> <span id="predB">-</span></p>
+    </div>
+</div>
+
+<script>
+    let exportModel;
+    let importModel;
+    
+    // --- Part A: Export ---
+    document.getElementById('trainBtn').addEventListener('click', async () => {
+        document.getElementById('statusA').innerText = "Training...";
+        exportModel = tf.sequential();
+        exportModel.add(tf.layers.dense({units: 1, inputShape: [1]}));
+        exportModel.compile({optimizer: 'sgd', loss: 'meanSquaredError'});
+        
+        const xs = tf.tensor2d([1, 2, 3, 4], [4, 1]);
+        const ys = tf.tensor2d([1, 3, 5, 7], [4, 1]);
+        
+        await exportModel.fit(xs, ys, {epochs: 100});
+        document.getElementById('statusA').innerText = "Model Trained. Ready to Export.";
+        document.getElementById('exportBtn').disabled = false;
+    });
+
+    document.getElementById('exportBtn').addEventListener('click', async () => {
+        // downloads:// triggers browser file download
+        await exportModel.save('downloads://my-exported-model');
+        document.getElementById('statusA').innerText = "Model files downloaded!";
+    });
+
+    // --- Part B: Import ---
+    document.getElementById('importBtn').addEventListener('click', async () => {
+        const fileInput = document.getElementById('uploadFiles');
+        if (fileInput.files.length !== 2) {
+            document.getElementById('statusB').innerText = "Error: Please select EXACTLY 2 files (.json and .bin).";
+            return;
+        }
+
+        document.getElementById('statusB').innerText = "Loading...";
+        try {
+            // Load from browser files IO handler
+            importModel = await tf.loadLayersModel(tf.io.browserFiles(
+                [fileInput.files[0], fileInput.files[1]]
+            ));
+            document.getElementById('statusB').innerText = "Model loaded successfully from files!";
+            document.getElementById('predictBtn').disabled = false;
+        } catch (e) {
+            document.getElementById('statusB').innerText = "Failed: " + e.message;
+        }
+    });
+
+    document.getElementById('predictBtn').addEventListener('click', () => {
+        if (!importModel) return;
+        const pred = importModel.predict(tf.tensor2d([10], [1, 1])).dataSync()[0];
+        document.getElementById('predB').innerText = pred.toFixed(4);
+    });
+</script>
+
+</body>
+</html>

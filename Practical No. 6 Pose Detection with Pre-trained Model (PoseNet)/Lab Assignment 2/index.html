@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lab 2: Squat Counter</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/posenet"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .wrapper { position: relative; display: inline-block; margin-top: 20px; }
+        video, canvas { border: 2px solid #ccc; border-radius: 8px; }
+        canvas { position: absolute; top: 0; left: 0; }
+        .stats { margin-top: 20px; padding: 15px; background: #f4f4f4; border-radius: 8px; width: 640px; text-align: center; }
+        .count { font-size: 48px; font-weight: bold; color: #2ecc71; }
+        #status { font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h1>Lab Assignment 2: Squat Counter</h1>
+    <p>Count repetitions of squats using keypoint relative positions.</p>
+    <div id="status">Loading PoseNet model...</div>
+    
+    <div class="wrapper">
+        <video id="video" width="640" height="480" autoplay playsinline></video>
+        <canvas id="output" width="640" height="480"></canvas>
+    </div>
+
+    <div class="stats">
+        <h2>Squat Count</h2>
+        <div class="count" id="squatCount">0</div>
+        <p>State: <span id="squatState">UP</span></p>
+    </div>
+
+<script>
+    const video = document.getElementById('video');
+    const canvas = document.getElementById('output');
+    const ctx = canvas.getContext('2d');
+    const statusText = document.getElementById('status');
+    const countText = document.getElementById('squatCount');
+    const stateText = document.getElementById('squatState');
+
+    let count = 0;
+    let state = 'UP';
+
+    async function setupCamera() {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: false });
+        video.srcObject = stream;
+        return new Promise((resolve) => { video.onloadedmetadata = () => resolve(video); });
+    }
+
+    function drawKeypoints(keypoints, minConfidence, ctx) {
+        keypoints.forEach((k) => {
+            if (k.score > minConfidence) {
+                ctx.beginPath();
+                ctx.arc(k.position.x, k.position.y, 5, 0, 2 * Math.PI);
+                ctx.fillStyle = 'red';
+                ctx.fill();
+            }
+        });
+    }
+
+    async function detectPoseInRealTime(model) {
+        const pose = await model.estimateSinglePose(video, { flipHorizontal: false });
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        if (pose.score >= 0.1) {
+            drawKeypoints(pose.keypoints, 0.5, ctx);
+
+            // Get Keypoints
+            const leftHip = pose.keypoints.find(k => k.part === 'leftHip');
+            const leftKnee = pose.keypoints.find(k => k.part === 'leftKnee');
+            
+            if (leftHip && leftKnee && leftHip.score > 0.5 && leftKnee.score > 0.5) {
+                // Determine squat logic based on Y axis.
+                // If hip is close to or below knee -> DOWN
+                // If hip is well above knee -> UP
+                
+                const distanceY = leftKnee.position.y - leftHip.position.y;
+                
+                // Assuming distanceY gets smaller when squatting down
+                if (distanceY < 20 && state === 'UP') {
+                    state = 'DOWN';
+                    stateText.innerText = 'DOWN';
+                } else if (distanceY > 60 && state === 'DOWN') {
+                    state = 'UP';
+                    stateText.innerText = 'UP';
+                    count++;
+                    countText.innerText = count;
+                }
+            }
+        }
+        
+        requestAnimationFrame(() => detectPoseInRealTime(model));
+    }
+
+    async function main() {
+        await setupCamera();
+        video.play();
+        const net = await posenet.load({ architecture: 'MobileNetV1', outputStride: 16, multiplier: 0.75 });
+        statusText.innerText = "Model loaded. Start squatting!";
+        detectPoseInRealTime(net);
+    }
+
+    main();
+</script>
+
+</body>
+</html>

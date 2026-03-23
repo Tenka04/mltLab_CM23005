@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lab 3: Incremental Categories</title>
+    <!-- TensorFlow.js and KNN Classifier -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/knn-classifier"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .wrapper { display: flex; margin-bottom: 20px; gap: 20px; }
+        video { border: 2px solid #ccc; border-radius: 8px; }
+        .controls { background: #f4f4f4; padding: 15px; border-radius: 8px; width: 300px; display: flex; flex-direction: column; gap: 10px; }
+        button { padding: 8px 15px; cursor: pointer; }
+        input[type="text"] { padding: 5px; width: calc(100% - 15px); }
+        .class-list { margin-top: 10px; }
+        .class-item { background: #e0e0e0; padding: 10px; border-radius: 4px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
+        .pred-text { font-size: 24px; font-weight: bold; color: #8e44ad; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+    <h1>Lab Assignment 3: Add Categories Incrementally</h1>
+    <p>Add new custom categories on-the-fly and observe how it affects predictions.</p>
+    
+    <div id="status">Loading...</div>
+
+    <div class="wrapper">
+        <video id="video" width="400" height="300" autoplay playsinline></video>
+        
+        <div class="controls">
+            <h3>Add New Category</h3>
+            <input type="text" id="newLabel" placeholder="e.g. Mug, Phone, Hand">
+            <button id="addCatBtn">Create Category</button>
+            <div class="class-list" id="classList"></div>
+        </div>
+    </div>
+
+    <div>
+        <h2 class="pred-text">Prediction: <span id="prediction">-</span> (<span id="confidence">0</span>%)</h2>
+    </div>
+
+<script>
+    const classifier = knnClassifier.create();
+    let net;
+    const video = document.getElementById('video');
+    const classes = [];
+    let classIdCounter = 0;
+
+    async function setupCamera() {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        video.srcObject = stream;
+        return new Promise(resolve => { video.onloadedmetadata = () => resolve(video); });
+    }
+
+    async function app() {
+        document.getElementById('status').innerText = 'Loading model...';
+        net = await mobilenet.load();
+        await setupCamera();
+        video.play();
+        document.getElementById('status').innerText = 'Ready! Add categories and start training.';
+
+        document.getElementById('addCatBtn').addEventListener('click', () => {
+            const label = document.getElementById('newLabel').value.trim();
+            if(!label) return;
+            
+            const currentId = classIdCounter++;
+            classes.push(label); // index matches currentId
+            
+            const div = document.createElement('div');
+            div.className = 'class-item';
+            div.innerHTML = `
+                <span><b>${label}</b> (<span id="count${currentId}">0</span>)</span>
+                <button onclick="addExample(${currentId})">Add Example</button>
+            `;
+            document.getElementById('classList').appendChild(div);
+            document.getElementById('newLabel').value = '';
+        });
+
+        // Continuous prediction loop
+        while (true) {
+            if (classifier.getNumClasses() > 0) {
+                const activation = net.infer(video, 'conv_preds');
+                const result = await classifier.predictClass(activation);
+                document.getElementById('prediction').innerText = classes[result.label];
+                document.getElementById('confidence').innerText = (result.confidences[result.label] * 100).toFixed(1);
+            }
+            await tf.nextFrame();
+        }
+    }
+
+    window.addExample = (id) => {
+        const activation = net.infer(video, true);
+        classifier.addExample(activation, id);
+        const countSpan = document.getElementById(`count${id}`);
+        countSpan.innerText = parseInt(countSpan.innerText) + 1;
+    };
+
+    app();
+</script>
+
+</body>
+</html>

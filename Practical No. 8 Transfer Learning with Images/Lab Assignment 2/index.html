@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lab 2: Evaluate Accuracy</title>
+    <!-- TensorFlow.js and KNN Classifier -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/knn-classifier"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .wrapper { display: flex; margin-bottom: 20px; gap: 20px; }
+        video { border: 2px solid #ccc; border-radius: 8px; }
+        .controls { display: flex; flex-direction: column; gap: 10px; justify-content: center; }
+        button { padding: 8px 15px; cursor: pointer; }
+        .stats { background: #f4f4f4; padding: 15px; border-radius: 8px; width: 640px; text-align: center; }
+        table { border-collapse: collapse; margin: 20px auto; }
+        th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
+        .active-mode { font-weight: bold; color: blue; }
+    </style>
+</head>
+<body>
+
+    <h1>Lab Assignment 2: Evaluate Accuracy & Confusion Matrix</h1>
+    <p>Train on categories, then switch to Test mode to evaluate accuracy.</p>
+    
+    <div id="status">Loading...</div>
+
+    <div style="margin-bottom: 15px;">
+        <label><input type="radio" name="mode" value="train" checked> <b>Train Mode</b></label>
+        <label style="margin-left: 20px;"><input type="radio" name="mode" value="test"> <b>Test/Validation Mode</b></label>
+    </div>
+
+    <div class="wrapper">
+        <video id="video" width="400" height="300" autoplay playsinline></video>
+        <div class="controls">
+            <button onclick="handleAction(0)">Action: Category A</button>
+            <button onclick="handleAction(1)">Action: Category B</button>
+            <p>Training Examples: A(<span id="train0">0</span>), B(<span id="train1">0</span>)</p>
+            <p>Test Examples: A(<span id="test0">0</span>), B(<span id="test1">0</span>)</p>
+        </div>
+    </div>
+
+    <div class="stats">
+        <h3>Results</h3>
+        <p>Overall Accuracy: <span id="accuracy">0</span>%</p>
+        <table>
+            <tr>
+                <th>True / Predicted</th>
+                <th>Pred A</th>
+                <th>Pred B</th>
+            </tr>
+            <tr>
+                <th>True A</th>
+                <td id="m00">0</td>
+                <td id="m01">0</td>
+            </tr>
+            <tr>
+                <th>True B</th>
+                <td id="m10">0</td>
+                <td id="m11">0</td>
+            </tr>
+        </table>
+    </div>
+
+<script>
+    const classifier = knnClassifier.create();
+    let net;
+    const video = document.getElementById('video');
+    const classes = ['A', 'B'];
+    
+    // Confusion Matrix: [True][Predicted]
+    let matrix = [[0, 0], [0, 0]];
+    let trainCounts = [0, 0];
+    let testCounts = [0, 0];
+    let correct = 0;
+    let totalTests = 0;
+
+    async function setupCamera() {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        video.srcObject = stream;
+        return new Promise(resolve => { video.onloadedmetadata = () => resolve(video); });
+    }
+
+    async function init() {
+        document.getElementById('status').innerText = 'Loading model...';
+        net = await mobilenet.load();
+        await setupCamera();
+        video.play();
+        document.getElementById('status').innerText = 'Ready!';
+    }
+
+    async function handleAction(classId) {
+        const mode = document.querySelector('input[name="mode"]:checked').value;
+        const activation = net.infer(video, true);
+        
+        if (mode === 'train') {
+            classifier.addExample(activation, classId);
+            trainCounts[classId]++;
+            document.getElementById(`train${classId}`).innerText = trainCounts[classId];
+        } else {
+            if (classifier.getNumClasses() === 0) {
+                alert("Please train the model first!");
+                return;
+            }
+            const result = await classifier.predictClass(activation);
+            const predictedId = parseInt(result.label);
+            
+            // Update stats
+            testCounts[classId]++;
+            document.getElementById(`test${classId}`).innerText = testCounts[classId];
+            totalTests++;
+            
+            if (predictedId === classId) correct++;
+            matrix[classId][predictedId]++;
+            
+            updateUI();
+        }
+    }
+
+    function updateUI() {
+        document.getElementById('m00').innerText = matrix[0][0];
+        document.getElementById('m01').innerText = matrix[0][1];
+        document.getElementById('m10').innerText = matrix[1][0];
+        document.getElementById('m11').innerText = matrix[1][1];
+        document.getElementById('accuracy').innerText = ((correct / totalTests) * 100).toFixed(1);
+    }
+
+    init();
+</script>
+
+</body>
+</html>

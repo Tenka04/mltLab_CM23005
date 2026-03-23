@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lab 2: Reload Model</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; padding: 20px; }
+        .container { width: 600px; }
+        button { padding: 10px 20px; margin: 10px 0; font-size: 16px; cursor: pointer; display: block; }
+        .stats { background: #f4f4f4; padding: 15px; border-radius: 8px; margin-top: 20px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Lab Assignment 2: Reload Model from LocalStorage</h1>
+    <p>Reload the model saved in Lab 1 and verify predictions match the original.</p>
+    <p><i>Note: You must run this on the same domain/port as Lab 1.</i></p>
+    
+    <button id="loadBtn">Load Model</button>
+    <button id="predictBtn" disabled>Run Prediction for x=10</button>
+
+    <div class="stats">
+        <p><b>Status:</b> <span id="status">Waiting to load...</span></p>
+        <p><b>Prediction for x=10:</b> <span id="pred">-</span></p>
+    </div>
+</div>
+
+<script>
+    let model;
+    
+    document.getElementById('loadBtn').addEventListener('click', async () => {
+        try {
+            document.getElementById('status').innerText = "Loading...";
+            // Load layer model from local storage
+            model = await tf.loadLayersModel('localstorage://lab1-model');
+            document.getElementById('status').innerText = "Model loaded successfully!";
+            document.getElementById('predictBtn').disabled = false;
+        } catch(e) {
+            document.getElementById('status').innerText = "Failed to load: " + e.message;
+        }
+    });
+
+    document.getElementById('predictBtn').addEventListener('click', () => {
+        if (!model) return;
+        const prediction = model.predict(tf.tensor2d([10], [1, 1])).dataSync()[0];
+        document.getElementById('pred').innerText = prediction.toFixed(4) + " (Compare with Lab 1)";
+    });
+</script>
+
+</body>
+</html>
