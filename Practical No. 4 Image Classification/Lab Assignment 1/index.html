@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lab 1: Image Classification (MobileNet)</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        img { max-width: 400px; max-height: 400px; border: 2px solid #ccc; border-radius: 8px; margin-bottom: 20px; }
+        .stats { background: #f4f4f4; padding: 15px; border-radius: 8px; width: 400px; }
+        #status { font-weight: bold; margin-bottom: 10px; }
+        input[type="file"] { margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <h1>Lab Assignment 1: Static Image Classification</h1>
+    <p>Classify a static image and display top-3 predictions using MobileNet.</p>
+    
+    <div id="status">Loading MobileNet...</div>
+
+    <input type="file" id="imageUpload" accept="image/*">
+    <img id="image" src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Cat03.jpg/1200px-Cat03.jpg" crossorigin="anonymous">
+
+    <div class="stats">
+        <h3>Top-3 Predictions</h3>
+        <ol id="predictions">
+            <li>-</li>
+            <li>-</li>
+            <li>-</li>
+        </ol>
+    </div>
+
+<script>
+    let net;
+    const imgEl = document.getElementById('image');
+    const statusText = document.getElementById('status');
+    const predList = document.getElementById('predictions');
+
+    async function app() {
+        net = await mobilenet.load();
+        statusText.innerText = 'Model Loaded! Ready to classify.';
+        classifyImage();
+    }
+
+    async function classifyImage() {
+        if (!net) return;
+        statusText.innerText = 'Classifying...';
+        const result = await net.classify(imgEl);
+        
+        predList.innerHTML = '';
+        result.forEach(p => {
+            const li = document.createElement('li');
+            li.innerText = `${p.className} (${(p.probability * 100).toFixed(2)}%)`;
+            predList.appendChild(li);
+        });
+        statusText.innerText = 'Classification Complete!';
+    }
+
+    document.getElementById('imageUpload').addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                imgEl.src = event.target.result;
+                imgEl.onload = classifyImage; // Re-classify when new image loads
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+
+    if (imgEl.complete) {
+        app();
+    } else {
+        imgEl.onload = app;
+    }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lab 3: RNN vs Dense Network</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .wrapper { display: flex; gap: 20px; margin-top: 20px; }
+        .panel { background: #f4f4f4; padding: 20px; border-radius: 8px; width: 400px; text-align: center; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin-bottom: 20px; }
+        .acc { font-size: 32px; font-weight: bold; color: #8e44ad; margin: 10px 0; }
+        .logs { background: #111; color: #0f0; font-family: monospace; height: 150px; overflow-y: auto; text-align: left; padding: 10px; font-size: 12px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <h1>Lab Assignment 3: Model Comparison (Sentiment)</h1>
+    <p>Compare performance of a Simple RNN vs a Dense network for sentiment tasks.</p>
+    
+    <button id="compareBtn">Start Training Both</button>
+
+    <div class="wrapper">
+        <div class="panel">
+            <h2>Dense Network</h2>
+            <div class="acc" id="lossDense">-</div>
+            <p>Loss after 50 Epochs</p>
+            <div class="logs" id="logDense">Waiting...<br></div>
+        </div>
+
+        <div class="panel">
+            <h2>Simple RNN</h2>
+            <div class="acc" id="lossRnn">-</div>
+            <p>Loss after 50 Epochs</p>
+            <div class="logs" id="logRnn">Waiting...<br></div>
+        </div>
+    </div>
+
+<script>
+    // Synthetic sentiment data: 5 sequence steps, 8 features per step
+    const xsData = tf.randomNormal([100, 5, 8]);
+    const ysData = tf.randomUniform([100, 1]).round();
+
+    function createDense() {
+        const m = tf.sequential();
+        m.add(tf.layers.flatten({inputShape: [5, 8]}));
+        m.add(tf.layers.dense({units: 16, activation: 'relu'}));
+        m.add(tf.layers.dense({units: 1, activation: 'sigmoid'}));
+        m.compile({optimizer: 'adam', loss: 'binaryCrossentropy'});
+        return m;
+    }
+
+    function createRnn() {
+        const m = tf.sequential();
+        m.add(tf.layers.simpleRNN({units: 16, inputShape: [5, 8]}));
+        m.add(tf.layers.dense({units: 1, activation: 'sigmoid'}));
+        m.compile({optimizer: 'adam', loss: 'binaryCrossentropy'});
+        return m;
+    }
+
+    document.getElementById('compareBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('compareBtn');
+        btn.disabled = true;
+
+        const dense = createDense();
+        const rnn = createRnn();
+        
+        const logDense = document.getElementById('logDense');
+        const logRnn = document.getElementById('logRnn');
+        
+        logDense.innerHTML = "Training...<br>";
+        logRnn.innerHTML = "Training...<br>";
+
+        await dense.fit(xsData, ysData, {
+            epochs: 50,
+            callbacks: {
+                onEpochEnd: async (epoch, logs) => {
+                    if (epoch % 10 === 0) {
+                        logDense.innerHTML += `Epoch ${epoch}: Loss=${logs.loss.toFixed(4)}<br>`;
+                        logDense.scrollTop = logDense.scrollHeight;
+                        document.getElementById('lossDense').innerText = logs.loss.toFixed(4);
+                        await tf.nextFrame();
+                    }
+                }
+            }
+        });
+        logDense.innerHTML += "<span style='color:yellow'>Done.</span>";
+
+        await rnn.fit(xsData, ysData, {
+            epochs: 50,
+            callbacks: {
+                onEpochEnd: async (epoch, logs) => {
+                    if (epoch % 10 === 0) {
+                        logRnn.innerHTML += `Epoch ${epoch}: Loss=${logs.loss.toFixed(4)}<br>`;
+                        logRnn.scrollTop = logRnn.scrollHeight;
+                        document.getElementById('lossRnn').innerText = logs.loss.toFixed(4);
+                        await tf.nextFrame();
+                    }
+                }
+            }
+        });
+        logRnn.innerHTML += "<span style='color:yellow'>Done.</span>";
+        
+        btn.disabled = false;
+        btn.innerText = "Train Again";
+    });
+</script>
+
+</body>
+</html>

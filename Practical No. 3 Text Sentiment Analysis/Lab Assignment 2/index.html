@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lab 2: Test Custom Sentences</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .stats { background: #f4f4f4; padding: 20px; border-radius: 8px; width: 500px; text-align: center; }
+        input[type="text"] { width: 80%; padding: 10px; font-size: 16px; margin-bottom: 10px; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+        .pred-positive { color: #2ecc71; font-size: 24px; font-weight: bold; }
+        .pred-negative { color: #e74c3c; font-size: 24px; font-weight: bold; }
+        #status { font-weight: bold; margin-bottom: 10px; }
+    </style>
+</head>
+<body>
+
+    <h1>Lab Assignment 2: Interpret Sentiment</h1>
+    <p>Test the model on custom sentences and interpret confidence scores.</p>
+    
+    <div id="status">Waiting to load model...</div>
+
+    <div class="stats">
+        <input type="text" id="inputText" placeholder="Type a sentence (e.g. 'I love this great product')">
+        <button id="predictBtn" disabled>Predict Sentiment</button>
+        
+        <h3 style="margin-top: 20px;">Result: <span id="result">-</span></h3>
+        <p>Confidence Score (0 to 1): <span id="score">0.000</span></p>
+    </div>
+
+<script>
+    let model;
+    
+    const vocab = {
+        'i': 1, 'love': 2, 'this': 3, 'great': 4, 'product': 5,
+        'is': 6, 'excellent': 7, 'and': 8, 'amazing': 9, 'hate': 10,
+        'terrible': 11, 'thing': 12, 'bad': 13, 'awful': 14, 'what': 15,
+        'a': 16, 'wonderful': 17, 'experience': 18, 'worst': 19, 'purchase': 20,
+        'ever': 21, 'made': 22
+    };
+
+    function encodeSentence(text) {
+        const words = text.toLowerCase().replace(/[^a-z ]/g, '').split(' ');
+        const seq = [];
+        for (let i = 0; i < 5; i++) {
+            if (i < words.length && vocab[words[i]]) {
+                seq.push(vocab[words[i]]);
+            } else {
+                seq.push(0); // padding or unknown
+            }
+        }
+        return seq;
+    }
+
+    async function loadModel() {
+        try {
+            document.getElementById('status').innerText = 'Loading model from Lab 1...';
+            model = await tf.loadLayersModel('localstorage://sentiment-lab1');
+            document.getElementById('status').innerText = 'Model loaded successfully!';
+            document.getElementById('predictBtn').disabled = false;
+        } catch (e) {
+            document.getElementById('status').innerText = 'Error loading model! Please run Lab 1 first.';
+            console.error(e);
+        }
+    }
+
+    document.getElementById('predictBtn').addEventListener('click', () => {
+        if (!model) return;
+        
+        const text = document.getElementById('inputText').value;
+        const seq = encodeSentence(text);
+        
+        const tensor = tf.tensor2d([seq]);
+        const prediction = model.predict(tensor).dataSync()[0];
+        
+        document.getElementById('score').innerText = prediction.toFixed(4);
+        
+        const resultEl = document.getElementById('result');
+        if (prediction >= 0.5) {
+            resultEl.innerText = 'Positive 😊';
+            resultEl.className = 'pred-positive';
+        } else {
+            resultEl.innerText = 'Negative 😠';
+            resultEl.className = 'pred-negative';
+        }
+    });
+
+    loadModel();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lab 2: Test Accuracy on Multiple Images</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .gallery { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; margin-top: 20px; }
+        .card { width: 200px; border: 1px solid #ccc; padding: 10px; border-radius: 8px; text-align: center; }
+        img { max-width: 100%; height: 150px; object-fit: cover; border-radius: 4px; }
+        .prediction { font-size: 14px; font-weight: bold; color: #27ae60; margin-top: 10px; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; }
+        #status { font-weight: bold; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <h1>Lab Assignment 2: Multi-Image Testing</h1>
+    <p>Test MobileNet accuracy on 5 different images.</p>
+    
+    <div id="status">Loading MobileNet...</div>
+    <button id="testBtn" disabled>Test All Images</button>
+
+    <div class="gallery" id="gallery">
+        <!-- JS will populate -->
+    </div>
+
+<script>
+    let net;
+    const galleryEl = document.getElementById('gallery');
+    
+    const imageUrls = [
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Cat03.jpg/300px-Cat03.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d9/Collage_of_Nine_Dogs.jpg/300px-Collage_of_Nine_Dogs.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/About_cars_1989.jpg/300px-About_cars_1989.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/2/22/Turkish_Van_Cat.jpg/300px-Turkish_Van_Cat.jpg",
+        "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Bananas.jpg/300px-Bananas.jpg"
+    ];
+
+    imageUrls.forEach((url, i) => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.innerHTML = `
+            <img id="img${i}" src="${url}" crossorigin="anonymous">
+            <div class="prediction" id="pred${i}">-</div>
+        `;
+        galleryEl.appendChild(card);
+    });
+
+    async function app() {
+        net = await mobilenet.load();
+        document.getElementById('status').innerText = 'Model Loaded! Click Test.';
+        document.getElementById('testBtn').disabled = false;
+    }
+
+    document.getElementById('testBtn').addEventListener('click', async () => {
+        document.getElementById('status').innerText = 'Classifying...';
+        
+        for (let i = 0; i < imageUrls.length; i++) {
+            const imgEl = document.getElementById(`img${i}`);
+            const result = await net.classify(imgEl);
+            document.getElementById(`pred${i}`).innerText = `${result[0].className} (${(result[0].probability * 100).toFixed(0)}%)`;
+        }
+        
+        document.getElementById('status').innerText = 'Testing Complete!';
+    });
+
+    app();
+</script>
+
+</body>
+</html>

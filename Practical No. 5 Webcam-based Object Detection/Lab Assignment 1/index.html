@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lab 1: Webcam Classification</title>
+    <!-- TensorFlow.js and MobileNet -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .wrapper { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 20px; }
+        video { border: 2px solid #ccc; border-radius: 8px; }
+        .stats { background: #f4f4f4; padding: 15px; border-radius: 8px; width: 640px; text-align: center; }
+        #status { font-weight: bold; color: #d35400; margin-bottom: 10px; }
+        .pred-text { font-size: 24px; font-weight: bold; color: #27ae60; }
+    </style>
+</head>
+<body>
+
+    <h1>Lab Assignment 1: Webcam Frame Classification</h1>
+    <p>Capture webcam frames and classify the scene using MobileNet.</p>
+    
+    <div id="status">Loading MobileNet...</div>
+
+    <div class="wrapper">
+        <video id="video" width="640" height="480" autoplay playsinline></video>
+        <div class="stats">
+            <h2>Top Prediction:</h2>
+            <div id="prediction" class="pred-text">None</div>
+            <p>Confidence: <span id="confidence">0</span>%</p>
+        </div>
+    </div>
+
+<script>
+    let net;
+    const video = document.getElementById('video');
+    const predEl = document.getElementById('prediction');
+    const confEl = document.getElementById('confidence');
+    const statusText = document.getElementById('status');
+
+    async function setupCamera() {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 }, audio: false });
+        video.srcObject = stream;
+        return new Promise(resolve => { video.onloadedmetadata = () => resolve(video); });
+    }
+
+    async function detect() {
+        const result = await net.classify(video);
+        if (result && result.length > 0) {
+            predEl.innerText = result[0].className;
+            confEl.innerText = (result[0].probability * 100).toFixed(1);
+        }
+        requestAnimationFrame(detect);
+    }
+
+    async function main() {
+        net = await mobilenet.load();
+        statusText.innerText = 'Starting Camera...';
+        await setupCamera();
+        video.play();
+        statusText.innerText = 'Classifying...';
+        detect();
+    }
+
+    main();
+</script>
+
+</body>
+</html>

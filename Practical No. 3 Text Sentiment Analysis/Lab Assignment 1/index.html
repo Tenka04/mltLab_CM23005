@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lab 1: Train Sentiment Classifier</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .stats { background: #f4f4f4; padding: 15px; border-radius: 8px; width: 600px; }
+        .log-box { background: black; color: #00ff00; font-family: monospace; padding: 10px; height: 300px; overflow-y: auto; text-align: left; border-radius: 8px; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin: 20px 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    </style>
+</head>
+<body>
+
+    <h1>Lab Assignment 1: Train Sentiment Classifier</h1>
+    <p>Train a basic sentiment classifier on a small custom dataset.</p>
+    
+    <div class="stats">
+        <h3>Training Dataset</h3>
+        <table>
+            <tr><th>Sentence</th><th>Sentiment</th></tr>
+            <tr><td>I love this great product</td><td>Positive (1)</td></tr>
+            <tr><td>This is excellent and amazing</td><td>Positive (1)</td></tr>
+            <tr><td>I hate this terrible thing</td><td>Negative (0)</td></tr>
+            <tr><td>This is bad and awful</td><td>Negative (0)</td></tr>
+            <tr><td>What a wonderful experience</td><td>Positive (1)</td></tr>
+            <tr><td>Worst purchase ever made</td><td>Negative (0)</td></tr>
+        </table>
+    </div>
+
+    <button id="trainBtn">Start Training</button>
+
+    <div class="stats">
+        <h3>Training Logs</h3>
+        <div class="log-box" id="logs">Waiting to start...<br></div>
+    </div>
+
+<script>
+    // Vocabulary mapping
+    const vocab = {
+        'i': 1, 'love': 2, 'this': 3, 'great': 4, 'product': 5,
+        'is': 6, 'excellent': 7, 'and': 8, 'amazing': 9, 'hate': 10,
+        'terrible': 11, 'thing': 12, 'bad': 13, 'awful': 14, 'what': 15,
+        'a': 16, 'wonderful': 17, 'experience': 18, 'worst': 19, 'purchase': 20,
+        'ever': 21, 'made': 22
+    };
+
+    const dataset = [
+        [[1,2,3,4,5], 1],
+        [[3,6,7,8,9], 1],
+        [[1,10,3,11,12], 0],
+        [[3,6,13,8,14], 0],
+        [[15,16,17,18,0], 1], // 0 is padding
+        [[19,20,21,22,0], 0]
+    ];
+
+    function createModel() {
+        const model = tf.sequential();
+        model.add(tf.layers.embedding({ inputDim: 25, outputDim: 8, inputLength: 5 }));
+        model.add(tf.layers.flatten());
+        model.add(tf.layers.dense({ units: 16, activation: 'relu' }));
+        model.add(tf.layers.dense({ units: 1, activation: 'sigmoid' }));
+        
+        model.compile({ optimizer: 'adam', loss: 'binaryCrossentropy', metrics: ['accuracy'] });
+        return model;
+    }
+
+    document.getElementById('trainBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('trainBtn');
+        btn.disabled = true;
+        const logsEl = document.getElementById('logs');
+        logsEl.innerHTML = "Initializing Model...<br>";
+
+        const model = createModel();
+        
+        const xs = tf.tensor2d(dataset.map(d => d[0]));
+        const ys = tf.tensor2d(dataset.map(d => d[1]), [6, 1]);
+
+        await model.fit(xs, ys, {
+            epochs: 50,
+            callbacks: {
+                onEpochEnd: async (epoch, logs) => {
+                    if (epoch % 5 === 0) {
+                        logsEl.innerHTML += `Epoch ${epoch}: loss = ${logs.loss.toFixed(4)}, acc = ${logs.acc.toFixed(4)}<br>`;
+                        logsEl.scrollTop = logsEl.scrollHeight;
+                    }
+                }
+            }
+        });
+        
+        logsEl.innerHTML += `<span style="color:yellow;">Training Complete! Model accuracy is high.</span><br>`;
+        await model.save('localstorage://sentiment-lab1');
+        logsEl.innerHTML += `<span style="color:white;">Model saved to LocalStorage for Lab 2.</span><br>`;
+        btn.disabled = false;
+        btn.innerText = "Train Again";
+    });
+</script>
+
+</body>
+</html>

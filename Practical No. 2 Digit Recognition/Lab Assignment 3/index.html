@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lab 3: CNN vs Dense network</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .wrapper { display: flex; gap: 20px; margin-top: 20px; }
+        .panel { background: #f4f4f4; padding: 20px; border-radius: 8px; width: 400px; text-align: center; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; margin-bottom: 20px; }
+        .acc { font-size: 32px; font-weight: bold; color: #3498db; margin: 10px 0; }
+        .logs { background: #111; color: #0f0; font-family: monospace; height: 150px; overflow-y: auto; text-align: left; padding: 10px; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+    <h1>Lab Assignment 3: Model Comparison</h1>
+    <p>Compare performance between a CNN and a simple Dense Network.</p>
+    
+    <button id="compareBtn">Start Comparison</button>
+
+    <div class="wrapper">
+        <div class="panel">
+            <h2>Dense Network (FCNN)</h2>
+            <div class="acc" id="accDense">0.00%</div>
+            <p>Parameters: <span id="paramDense">-</span></p>
+            <div class="logs" id="logDense">Waiting...<br></div>
+        </div>
+
+        <div class="panel">
+            <h2>Convolutional (CNN)</h2>
+            <div class="acc" id="accCnn">0.00%</div>
+            <p>Parameters: <span id="paramCnn">-</span></p>
+            <div class="logs" id="logCnn">Waiting...<br></div>
+        </div>
+    </div>
+
+<script>
+    function getBatch() {
+        return {
+            xs: tf.randomNormal([64, 28, 28, 1]),
+            labels: tf.oneHot(tf.randomUniform([64], 0, 10, 'int32'), 10)
+        };
+    }
+
+    function createDense() {
+        const m = tf.sequential();
+        m.add(tf.layers.flatten({inputShape: [28, 28, 1]}));
+        m.add(tf.layers.dense({units: 128, activation: 'relu'}));
+        m.add(tf.layers.dense({units: 10, activation: 'softmax'}));
+        m.compile({optimizer: 'adam', loss: 'categoricalCrossentropy', metrics: ['accuracy']});
+        return m;
+    }
+
+    function createCnn() {
+        const m = tf.sequential();
+        m.add(tf.layers.conv2d({inputShape: [28, 28, 1], kernelSize: 3, filters: 16, activation: 'relu'}));
+        m.add(tf.layers.maxPooling2d({poolSize: [2, 2]}));
+        m.add(tf.layers.flatten());
+        m.add(tf.layers.dense({units: 10, activation: 'softmax'}));
+        m.compile({optimizer: 'adam', loss: 'categoricalCrossentropy', metrics: ['accuracy']});
+        return m;
+    }
+
+    document.getElementById('compareBtn').addEventListener('click', async () => {
+        const dense = createDense();
+        const cnn = createCnn();
+        
+        document.getElementById('paramDense').innerText = dense.countParams();
+        document.getElementById('paramCnn').innerText = cnn.countParams();
+        
+        const logDense = document.getElementById('logDense');
+        const logCnn = document.getElementById('logCnn');
+        
+        logDense.innerHTML = "Training...<br>";
+        logCnn.innerHTML = "Training...<br>";
+
+        // Run 20 pseudo-batches side-by-side
+        for(let i=1; i<=20; i++) {
+            const batch = getBatch();
+            
+            // Train Dense
+            const hDense = await dense.trainOnBatch(batch.xs, batch.labels);
+            logDense.innerHTML += `Batch ${i}: Acc=${(hDense[1]*100).toFixed(1)}%<br>`;
+            document.getElementById('accDense').innerText = (hDense[1]*100).toFixed(2) + '%';
+            logDense.scrollTop = logDense.scrollHeight;
+            
+            // Train CNN
+            const hCnn = await cnn.trainOnBatch(batch.xs, batch.labels);
+            logCnn.innerHTML += `Batch ${i}: Acc=${(hCnn[1]*100).toFixed(1)}%<br>`;
+            document.getElementById('accCnn').innerText = (hCnn[1]*100).toFixed(2) + '%';
+            logCnn.scrollTop = logCnn.scrollHeight;
+            
+            tf.dispose(batch);
+            await tf.nextFrame();
+        }
+        
+        logDense.innerHTML += "<span style='color:yellow'>Done.</span>";
+        logCnn.innerHTML += "<span style='color:yellow'>Done.</span>";
+    });
+</script>
+
+</body>
+</html>

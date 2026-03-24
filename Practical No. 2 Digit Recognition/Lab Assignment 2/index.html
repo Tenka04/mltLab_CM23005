@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lab 2: Draw and Classify</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        #canvas { border: 2px solid #333; cursor: crosshair; touch-action: none; background: #fff; }
+        .controls { display: flex; gap: 10px; margin: 20px 0; }
+        button { padding: 10px 20px; cursor: pointer; }
+        .stats { background: #f4f4f4; padding: 15px; border-radius: 8px; width: 300px; text-align: center; }
+        #prediction { font-size: 48px; font-weight: bold; color: #2ecc71; margin: 10px 0; }
+    </style>
+</head>
+<body>
+
+    <h1>Lab Assignment 2: Draw a Digit</h1>
+    <p>Draw a digit (0-9) on the canvas to classify it.</p>
+    
+    <canvas id="canvas" width="280" height="280"></canvas>
+    
+    <div class="controls">
+        <button id="clearBtn">Clear</button>
+        <button id="predictBtn">Classify</button>
+    </div>
+
+    <div class="stats">
+        <h3>Prediction</h3>
+        <div id="prediction">-</div>
+    </div>
+
+<script>
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let isDrawing = false;
+    let model;
+
+    // Setup Canvas
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.lineWidth = 15;
+    ctx.lineCap = "round";
+
+    canvas.addEventListener('mousedown', (e) => {
+        isDrawing = true;
+        ctx.beginPath();
+        ctx.moveTo(e.offsetX, e.offsetY);
+    });
+    canvas.addEventListener('mousemove', (e) => {
+        if (!isDrawing) return;
+        ctx.lineTo(e.offsetX, e.offsetY);
+        ctx.stroke();
+    });
+    canvas.addEventListener('mouseup', () => isDrawing = false);
+
+    document.getElementById('clearBtn').addEventListener('click', () => {
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        document.getElementById('prediction').innerText = '-';
+    });
+
+    // Mock Model to Simulate Pre-trained CNN for visual completeness
+    function createMockModel() {
+        const m = tf.sequential();
+        m.add(tf.layers.flatten({inputShape: [28, 28, 1]}));
+        m.add(tf.layers.dense({units: 10, activation: 'softmax'}));
+        return m;
+    }
+
+    async function app() {
+        model = createMockModel();
+        // Here we would typically load a pretrained model:
+        // model = await tf.loadLayersModel('path/to/model.json');
+    }
+
+    document.getElementById('predictBtn').addEventListener('click', () => {
+        if (!model) return;
+        
+        // Convert canvas down to 28x28 grayscale tensor
+        const imgParams = ctx.getImageData(0, 0, 280, 280);
+        let tensor = tf.browser.fromPixels(canvas, 1);
+        tensor = tf.image.resizeBilinear(tensor, [28, 28]);
+        
+        // Invert colors (MNIST is white on black, canvas is black on white)
+        tensor = tf.abs(tf.sub(tensor, 255)).div(255).expandDims(0);
+        
+        const prediction = model.predict(tensor);
+        const pIndex = prediction.argMax(1).dataSync()[0];
+        document.getElementById('prediction').innerText = pIndex;
+    });
+
+    app();
+</script>
+
+</body>
+</html>

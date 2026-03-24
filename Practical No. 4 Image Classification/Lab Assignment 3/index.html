@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Lab 3: MobileNet vs COCO-SSD</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .wrapper { display: flex; gap: 40px; margin-top: 20px; }
+        .panel { padding: 20px; background: #f4f4f4; border-radius: 8px; width: 350px; }
+        img { max-width: 100%; border-radius: 4px; }
+        ul { padding-left: 20px; }
+        #status { font-weight: bold; margin-bottom: 20px; }
+        button { padding: 10px 20px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <h1>Lab Assignment 3: Model Comparison</h1>
+    <p>Compare Image Classification (MobileNet) vs Object Detection (COCO-SSD).</p>
+    
+    <div id="status">Loading Models...</div>
+    
+    <div>
+        <img id="image" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c8/Black_Labrador_Retriever_-_Male_IMG_3323.jpg/400px-Black_Labrador_Retriever_-_Male_IMG_3323.jpg" crossorigin="anonymous">
+    </div>
+    <button id="compareBtn" disabled>Run Comparison</button>
+
+    <div class="wrapper">
+        <div class="panel">
+            <h3>MobileNet (Classification)</h3>
+            <p>Describes the main subject of the image.</p>
+            <ul id="mobilenetList"><li>-</li></ul>
+        </div>
+        <div class="panel">
+            <h3>COCO-SSD (Object Detection)</h3>
+            <p>Finds multiple objects and bounding box info.</p>
+            <ul id="cocossdList"><li>-</li></ul>
+        </div>
+    </div>
+
+<script>
+    let netMobileNet;
+    let netCocoSsd;
+    const imgEl = document.getElementById('image');
+
+    async function app() {
+        netMobileNet = await mobilenet.load();
+        document.getElementById('status').innerText = 'MobileNet Loaded... Loading COCO-SSD...';
+        netCocoSsd = await cocoSsd.load();
+        document.getElementById('status').innerText = 'Both Models Loaded!';
+        document.getElementById('compareBtn').disabled = false;
+    }
+
+    document.getElementById('compareBtn').addEventListener('click', async () => {
+        document.getElementById('status').innerText = 'Running Inference...';
+        
+        // Run MobileNet
+        const resultMN = await netMobileNet.classify(imgEl);
+        const mnList = document.getElementById('mobilenetList');
+        mnList.innerHTML = '';
+        resultMN.forEach(p => {
+            const li = document.createElement('li');
+            li.innerText = `${p.className} (${(p.probability * 100).toFixed(1)}%)`;
+            mnList.appendChild(li);
+        });
+
+        // Run COCO-SSD
+        const resultSSD = await netCocoSsd.detect(imgEl);
+        const ssdList = document.getElementById('cocossdList');
+        ssdList.innerHTML = '';
+        if (resultSSD.length === 0) {
+            ssdList.innerHTML = '<li>No objects detected</li>';
+        } else {
+            resultSSD.forEach(p => {
+                const li = document.createElement('li');
+                li.innerText = `${p.class} (${(p.score * 100).toFixed(1)}%)`;
+                ssdList.appendChild(li);
+            });
+        }
+        
+        document.getElementById('status').innerText = 'Inference Complete!';
+    });
+
+    app();
+</script>
+
+</body>
+</html>
