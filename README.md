@@ -4,23 +4,41 @@ This repository contains various machine learning laboratory assignments and pro
 
 ## Projects
 
-0. [Hello TensorFlow.js](./prelab/HelloTensorFLowJS/)  
-   Introduction to TensorFlow.js basics.
+0. [Hello TensorFlow.js / Prelab](./Prelab/)  
+   Introduction to TensorFlow.js basics.  
+   🌍 [Live Demo](https://tenka04.github.io/mltLab_CM23005/Prelab/)
 
-1. [Linear Regression with Synthetic Data](./Linear%20Regression%20with%20Synthetic%20Data/)  
-   Laboratory assignments exploring linear regression with synthetic data.
+1. [Linear Regression with Synthetic Data](./Practical%20No.%201%20Linear%20Regression%20with%20Synthetic%20Data/)  
+   Laboratory assignments exploring linear regression with synthetic data.  
+   🌍 [Live Demo](https://tenka04.github.io/mltLab_CM23005/Practical%20No.%201%20Linear%20Regression%20with%20Synthetic%20Data/)
 
-2. [Digit Recognition (MNIST Dataset)](./DigitRecognitionMNISTDataset/)  
-   A web-based application for digit recognition using the MNIST dataset.
+2. [Digit Recognition](./Practical%20No.%202%20Digit%20Recognition/)  
+   A web-based application for digit recognition using the MNIST dataset.  
+   🌍 [Live Demo](https://tenka04.github.io/mltLab_CM23005/Practical%20No.%202%20Digit%20Recognition/)
 
-3. [Text Sentiment Analysis (TensorFlow.js)](./Text%20Sentiment%20Analysis/)  
-   Text sentiment analysis application.
+3. [Text Sentiment Analysis](./Practical%20No.%203%20Text%20Sentiment%20Analysis/)  
+   Text sentiment analysis application.  
+   🌍 [Live Demo](https://tenka04.github.io/mltLab_CM23005/Practical%20No.%203%20Text%20Sentiment%20Analysis/)
 
-4. [Image classification with MobileNet](./Image%20Classification%20%26%20Webcam-based%20Object%20Detection/)  
-   Image classification using MobileNet model.
+4. [Image Classification](./Practical%20No.%204%20Image%20Classification/)  
+   Image classification using MobileNet model.  
+   🌍 [Live Demo](https://tenka04.github.io/mltLab_CM23005/Practical%20No.%204%20Image%20Classification/)
 
-5. [Webcam-based Object Detection](./Image%20Classification%20%26%20Webcam-based%20Object%20Detection/)  
-   Real-time object detection using webcam input.
+5. [Webcam-based Object Detection](./Practical%20No.%205%20Webcam-based%20Object%20Detection/)  
+   Real-time object detection using webcam input.  
+   🌍 [Live Demo](https://tenka04.github.io/mltLab_CM23005/Practical%20No.%205%20Webcam-based%20Object%20Detection/)
+
+6. [Pose Detection with Pre-trained Model (PoseNet)](./Practical%20No.%206%20Pose%20Detection%20with%20Pre-trained%20Model%20%28PoseNet%29/)  
+   Real-time pose estimation using PoseNet.  
+   🌍 [Live Demo](https://tenka04.github.io/mltLab_CM23005/Practical%20No.%206%20Pose%20Detection%20with%20Pre-trained%20Model%20%28PoseNet%29/)
+
+7. [Deploying a Model in Browser](./Practical%20No.%207%20Deploying%20a%20Model%20in%20Browser/)  
+   Deploying and using a pre-trained ML model directly in the browser.  
+   🌍 [Live Demo](https://tenka04.github.io/mltLab_CM23005/Practical%20No.%207%20Deploying%20a%20Model%20in%20Browser/)
+
+8. [Transfer Learning with Images](./Practical%20No.%208%20Transfer%20Learning%20with%20Images/)  
+   Applying transfer learning techniques to image classification tasks.  
+   🌍 [Live Demo](https://tenka04.github.io/mltLab_CM23005/Practical%20No.%208%20Transfer%20Learning%20with%20Images/)
 
 ## Getting Started
 
