@@ -40,6 +40,10 @@ This repository contains various machine learning laboratory assignments and pro
    Applying transfer learning techniques to image classification tasks.  
    🌍 **Live Demos:** [Lab Assignment 1](https://tenka04.github.io/mltLab_CM23005/Practical%20No.%208%20Transfer%20Learning%20with%20Images/Lab%20Assignment%201/) | [Lab Assignment 2](https://tenka04.github.io/mltLab_CM23005/Practical%20No.%208%20Transfer%20Learning%20with%20Images/Lab%20Assignment%202/) | [Lab Assignment 3](https://tenka04.github.io/mltLab_CM23005/Practical%20No.%208%20Transfer%20Learning%20with%20Images/Lab%20Assignment%203/)
 
+9. [Open Ended Practical: Facial Emotion Detection](./Practical%20No.%209%20Open%20Ended%20Practical/)  
+   Real-time facial expression and sentiment detection running entirely in the browser without a backend.  
+   🌍 **Live Demo:** [Facial Emotion Detection](https://tenka04.github.io/mltLab_CM23005/Practical%20No.%209%20Open%20Ended%20Practical/)
+
 ## Getting Started
 
 Each project is self-contained and can be run by opening the `index.html` file in a web browser. Some projects may require a local server for certain features.

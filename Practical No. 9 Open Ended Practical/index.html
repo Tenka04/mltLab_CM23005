@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Facial Emotion & Sentiment Detection</title>
+    
+    <!-- Dependencies -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Google Fonts for Modern Typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --surface: rgba(30, 41, 59, 0.7);
+            --border: rgba(255, 255, 255, 0.1);
+            --text-main: #f8fafc;
+            --text-secondary: #94a3b8;
+            --accent: #38bdf8;
+            
+            /* Sentiment Colors */
+            --positive: #10b981;
+            --negative: #ef4444;
+            --neutral: #64748b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+            background-image: radial-gradient(circle at top right, rgba(56, 189, 248, 0.15), transparent 400px),
+                              radial-gradient(circle at bottom left, rgba(139, 92, 246, 0.15), transparent 400px);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            animation: fadeIn 1s ease-out;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #38bdf8, #8b5cf6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.5rem;
+        }
+
+        p.subtitle {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+        }
+
+        .main-container {
+            display: flex;
+            gap: 2rem;
+            width: 100%;
+            max-width: 1200px;
+            align-items: flex-start;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* Video Section */
+        .video-wrapper {
+            position: relative;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1rem;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 320px;
+            min-height: 240px;
+            overflow: hidden;
+            animation: slideUp 0.8s ease-out;
+        }
+
+        video {
+            border-radius: 12px;
+            width: 100%;
+            max-width: 640px;
+            transform: scaleX(-1); /* mirror effect */
+        }
+
+        canvas#overlay {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+            z-index: 10;
+        }
+
+        .loading-state {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            z-index: 20;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Dashboard Section */
+        .dashboard {
+            flex: 1;
+            min-width: 300px;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            animation: slideUp 1s ease-out;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 1.5rem;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card h2 {
+            font-size: 1.25rem;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 0.5rem;
+        }
+
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .emotion-display {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-transform: capitalize;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .confidence {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+        .sentiment-badge {
+            padding: 0.4rem 1rem;
+            border-radius: 9999px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #fff;
+            background-color: var(--neutral);
+            transition: background-color 0.3s ease;
+        }
+
+        .message-box {
+            padding: 1rem;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.05);
+            font-size: 1.1rem;
+            color: var(--text-main);
+            font-style: italic;
+        }
+
+        .chart-container {
+            position: relative;
+            height: 250px;
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        /* Animations */
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Responsive */
+        @media (max-width: 900px) {
+            .main-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            .video-wrapper, .dashboard {
+                width: 100%;
+                max-width: 640px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Facial Emotion & Sentiment AI</h1>
+        <p class="subtitle">Open-Ended Practical: Real-Time Analysis inside the browser</p>
+    </header>
+
+    <div class="main-container">
+        <!-- Webcam Feed -->
+        <div class="video-wrapper">
+            <div class="loading-state" id="loadingState">
+                <div class="spinner"></div>
+                <span id="loadingText">Loading AI Models...</span>
+            </div>
+            <video id="video" width="640" height="480" autoplay muted playsinline></video>
+            <canvas id="overlay"></canvas>
+        </div>
+
+        <!-- Dashboard -->
+        <div class="dashboard">
+            <!-- Live Feedback Card -->
+            <div class="card">
+                <h2>Real-Time Sentiment</h2>
+                
+                <div class="status-header">
+                    <div class="emotion-display">
+                        <span id="emotionLabel">--</span>
+                        <span class="confidence" id="confidenceLabel">0%</span>
+                    </div>
+                    <div class="sentiment-badge" id="sentimentBadge">Neutral</div>
+                </div>
+
+                <div class="message-box" id="motivationalMessage">
+                    Waiting for face detection...
+                </div>
+            </div>
+
+            <!-- Emotion History Chart Card -->
+            <div class="card">
+                <h2>Emotion Frequency</h2>
+                <div class="chart-container">
+                    <canvas id="emotionChart"></canvas>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: -0.5rem;">
+                <button id="resetChartBtn" style="padding: 0.5rem 1rem; border: none; border-radius: 8px; background: rgba(255,255,255,0.1); color: #fff; cursor: pointer; transition: background 0.3s; font-family: 'Outfit';">Reset Chart</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Logic -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const video = document.getElementById('video');
+            const overlay = document.getElementById('overlay');
+            const loadingState = document.getElementById('loadingState');
+            const loadingText = document.getElementById('loadingText');
+            
+            const emotionLabel = document.getElementById('emotionLabel');
+            const confidenceLabel = document.getElementById('confidenceLabel');
+            const sentimentBadge = document.getElementById('sentimentBadge');
+            const motivationalMessage = document.getElementById('motivationalMessage');
+            const resetChartBtn = document.getElementById('resetChartBtn');
+
+            // --- Configuration & Data ---
+            const emotionMappings = {
+                happy: { sentiment: 'Positive', color: 'var(--positive)', message: 'Keep smiling! 😊 You are doing great.' },
+                surprised: { sentiment: 'Positive', color: 'var(--positive)', message: 'Wow! What a pleasant surprise! 😲' },
+                sad: { sentiment: 'Negative', color: 'var(--negative)', message: 'It\'s okay to take a break. Take care of yourself 💙' },
+                angry: { sentiment: 'Negative', color: 'var(--negative)', message: 'Take a deep breath and count to ten. 😌' },
+                fearful: { sentiment: 'Negative', color: 'var(--negative)', message: 'You are safe here. Don\'t panic. 🛡️' },
+                disgusted: { sentiment: 'Negative', color: 'var(--negative)', message: 'Let it go, focus on the bright side. 🤢' },
+                neutral: { sentiment: 'Neutral', color: 'var(--neutral)', message: 'Staying calm and balanced. 🧘‍♂️' }
+            };
+
+            const emotionHistory = {
+                happy: 0, sad: 0, angry: 0, surprised: 0, neutral: 0, fearful: 0, disgusted: 0
+            };
+
+            // --- Chart.js Setup ---
+            const ctx = document.getElementById('emotionChart').getContext('2d');
+            Chart.defaults.color = '#94a3b8';
+            Chart.defaults.font.family = 'Outfit';
+            
+            let chart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Happy', 'Sad', 'Angry', 'Surprised', 'Neutral', 'Fearful', 'Disgusted'],
+                    datasets: [{
+                        label: 'Detected Frames',
+                        data: [0, 0, 0, 0, 0, 0, 0],
+                        backgroundColor: [
+                            'rgba(16, 185, 129, 0.7)', // green
+                            'rgba(239, 68, 68, 0.7)',  // red
+                            'rgba(239, 68, 68, 0.7)',  // red
+                            'rgba(16, 185, 129, 0.7)', // green
+                            'rgba(100, 116, 139, 0.7)',// grey
+                            'rgba(239, 68, 68, 0.7)',  // red
+                            'rgba(239, 68, 68, 0.7)'   // red
+                        ],
+                        borderWidth: 1,
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { 
+                            beginAtZero: true, 
+                            grid: { color: 'rgba(255,255,255,0.05)' } 
+                        },
+                        x: { 
+                            grid: { display: false } 
+                        }
+                    },
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    animation: {
+                        duration: 0 // Disable animation for real-time updates for performance
+                    }
+                }
+            });
+
+            resetChartBtn.addEventListener('click', () => {
+                Object.keys(emotionHistory).forEach(k => emotionHistory[k] = 0);
+                updateChart();
+            });
+
+            function updateChart() {
+                chart.data.datasets[0].data = [
+                    emotionHistory.happy,
+                    emotionHistory.sad,
+                    emotionHistory.angry,
+                    emotionHistory.surprised,
+                    emotionHistory.neutral,
+                    emotionHistory.fearful,
+                    emotionHistory.disgusted
+                ];
+                chart.update();
+            }
+
+            // --- Application Boot ---
+            // Load face-api.js models from CDN
+            const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/';
+            
+            async function loadModels() {
+                try {
+                    loadingText.innerText = 'Loading TinyFaceDetector...';
+                    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+                    
+                    loadingText.innerText = 'Loading Emotion Classification Model...';
+                    await faceapi.nets.faceExpressionNet.loadFromUri(MODEL_URL);
+                    
+                    loadingText.innerText = 'Requesting Camera Access...';
+                    startVideo();
+                } catch (error) {
+                    console.error("Error loading models:", error);
+                    loadingText.innerText = 'Failed to load models. Check console.';
+                    loadingState.querySelector('.spinner').style.display = 'none';
+                }
+            }
+
+            function startVideo() {
+                navigator.mediaDevices.getUserMedia({ video: { width: 640, height: 480 } })
+                    .then(stream => {
+                        video.srcObject = stream;
+                    })
+                    .catch(err => {
+                        console.error("Error accessing webcam:", err);
+                        loadingText.innerText = 'Camera access denied or unavailable.';
+                        loadingState.querySelector('.spinner').style.display = 'none';
+                    });
+            }
+
+            video.addEventListener('play', () => {
+                // Models loaded and video playing!
+                loadingState.style.display = 'none';
+                
+                // Match canvas to video size
+                const displaySize = { width: video.width, height: video.height };
+                faceapi.matchDimensions(overlay, displaySize);
+
+                // Start Detection Loop
+                setInterval(async () => {
+                    const detections = await faceapi.detectAllFaces(video, new faceapi.TinyFaceDetectorOptions())
+                                                    .withFaceExpressions();
+                    
+                    const resizedDetections = faceapi.resizeResults(detections, displaySize);
+                    
+                    // Clear previous drawings
+                    const ctxOverlay = overlay.getContext('2d');
+                    ctxOverlay.clearRect(0, 0, overlay.width, overlay.height);
+
+                    // Note: Since video is mirrored via CSS (`transform: scaleX(-1)`), 
+                    // the canvas drawing must also be mirrored to align visually, 
+                    // OR we draw normally and mirror the canvas.
+                    // We will mirror the context before drawing to fix alignment
+                    ctxOverlay.save();
+                    ctxOverlay.translate(overlay.width, 0);
+                    ctxOverlay.scale(-1, 1);
+                    
+                    faceapi.draw.drawDetections(overlay, resizedDetections);
+                    // Customize expression drawing if needed, but default is fine:
+                    faceapi.draw.drawFaceExpressions(overlay, resizedDetections, 0.05);
+                    
+                    ctxOverlay.restore();
+
+                    // Process primary face logic for UI dashboard updates
+                    if (detections && detections.length > 0) {
+                        // Get the most prominent face
+                        const primaryFace = detections[0]; 
+                        const expressions = primaryFace.expressions;
+                        
+                        // Find dominant emotion
+                        let maxEmotion = 'neutral';
+                        let maxVal = 0;
+                        for (const [emotion, value] of Object.entries(expressions)) {
+                            if (value > maxVal) {
+                                maxVal = value;
+                                maxEmotion = emotion;
+                            }
+                        }
+
+                        // Update Dashboard UI (throttle chart updates slightly to prevent jitters, doing it every frame is demanding but okay for this)
+                        const mapping = emotionMappings[maxEmotion];
+                        
+                        emotionLabel.innerText = maxEmotion;
+                        confidenceLabel.innerText = `(${(maxVal * 100).toFixed(1)}%)`;
+                        
+                        sentimentBadge.innerText = mapping.sentiment;
+                        sentimentBadge.style.backgroundColor = mapping.color;
+                        
+                        motivationalMessage.innerText = mapping.message;
+
+                        // Update Chart History (increment by 1 per frame)
+                        if (maxVal > 0.4) {
+                            emotionHistory[maxEmotion]++;
+                            updateChart();
+                        }
+
+                    } else {
+                        // No face detected
+                        emotionLabel.innerText = '--';
+                        confidenceLabel.innerText = '';
+                        sentimentBadge.innerText = 'None';
+                        sentimentBadge.style.backgroundColor = 'var(--neutral)';
+                        motivationalMessage.innerText = 'Waiting for a clear face...';
+                    }
+
+                }, 100); // Process every 100ms (~10 fps)
+            });
+
+            // Start everything
+            loadModels();
+        });
+    </script>
+</body>
+</html>
